@@ -6,17 +6,12 @@ import pygame
 # 1. Initialize Pygame
 pygame.init()
 
-# 2. Screen setup for fullscreen
-# Get screen dimensions
-screen_info = pygame.display.Info()
-screen_width, screen_height = screen_info.current_w, screen_info.current_h
-
-# Create a fullscreen display
-screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
+# 2. Screen setup
+screen_width, screen_height = 1536, 864
+screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("SchoolBreak")
 
-# Hide the default mouse cursor
-pygame.mouse.set_visible(False)
+
 
 # 3. Game variables
 running = True
@@ -44,14 +39,21 @@ timer_font = pygame.font.Font(None, 50)
 title_image = pygame.image.load('title.png').convert_alpha()
 title_rect = title_image.get_rect(bottomright=(screen_width - 20, screen_height - 20))
 
+player_image = pygame.image.load('test_image.png').convert_alpha()
+player_image = pygame.transform.scale(player_image, (50, 50))
+
+# Button positioning
+y_pos = 20
 start_text = button_font.render("Start", True, WHITE)
-start_rect = start_text.get_rect(topleft=(20, 20))
+start_rect = start_text.get_rect(topleft=(20, y_pos))
 
+y_pos += start_rect.height + 20
 credits_text = button_font.render("Credits", True, WHITE)
-credits_rect = credits_text.get_rect(topleft=(20, 20 + start_text.get_height() + 20))
+credits_rect = credits_text.get_rect(topleft=(20, y_pos))
 
+y_pos += credits_rect.height + 20
 quit_text = button_font.render("Quit", True, WHITE)
-quit_rect = quit_text.get_rect(topleft=(20, credits_rect.bottom + 20))
+quit_rect = quit_text.get_rect(topleft=(20, y_pos))
 
 credits_content_text = title_font.render("Made by NEXTLAB", True, WHITE)
 credits_content_rect = credits_content_text.get_rect(center=(screen_width / 2, screen_height / 2))
@@ -155,7 +157,7 @@ while running:
     player_pos = pygame.mouse.get_pos()
 
     # Create a rect for the player for collision detection
-    player_rect = pygame.Rect(player_pos[0] - 15, player_pos[1] - 15, 30, 30)
+    player_rect = pygame.Rect(player_pos[0] - 25, player_pos[1] - 25, 50, 50)
 
     if game_state == 'game':
         # Check for collision with obstacles
@@ -176,32 +178,30 @@ while running:
 
     # --- Drawing ---
     if game_state == 'start_menu':
+        pygame.mouse.set_visible(True)
         screen.fill(BLACK)
         # Draw title and buttons
         screen.blit(title_image, title_rect)
         screen.blit(start_text, start_rect)
         screen.blit(credits_text, credits_rect)
         screen.blit(quit_text, quit_rect)
-        # Draw the player (as a cursor) at the mouse position
-        pygame.draw.circle(screen, RED, player_pos, 15)
 
     elif game_state == 'credits':
+        pygame.mouse.set_visible(True)
         screen.fill(BLACK)
         screen.blit(credits_content_text, credits_content_rect)
-        # Draw the player (as a cursor) at the mouse position
-        pygame.draw.circle(screen, RED, player_pos, 15)
 
     elif game_state == 'game_over':
+        pygame.mouse.set_visible(True)
         screen.fill(RED)
         screen.blit(game_over_text, game_over_rect)
-        pygame.draw.circle(screen, WHITE, player_pos, 15) # Show player on game over
 
     elif game_state == 'fade_out':
         # Draw the last game frame
         screen.fill(stage_backgrounds.get(current_stage, WHITE))
         current_goal_rect = stage_goals.get(current_stage)
         pygame.draw.rect(screen, GREEN, current_goal_rect)
-        pygame.draw.circle(screen, RED, player_pos, 15)
+        screen.blit(player_image, player_rect)
 
         # Increase alpha and draw the fade surface
         fade_alpha += 4
@@ -217,6 +217,7 @@ while running:
             time_screen_start = pygame.time.get_ticks() # Record when the time screen appears
 
     elif game_state == 'show_time':
+        pygame.mouse.set_visible(True)
         screen.fill(BLACK)
         # Format and display the final time
         total_seconds = final_time // 1000
@@ -239,6 +240,7 @@ while running:
 
 
     elif game_state == 'credits_roll':
+        pygame.mouse.set_visible(True)
         screen.fill(BLACK)
         all_off_screen = True
         for text_surf, text_rect in credit_renders:
@@ -253,6 +255,7 @@ while running:
             credit_renders = [] # Clear credits
 
     elif game_state == 'game':
+        pygame.mouse.set_visible(False)
         # Set the background color based on the current stage
         screen.fill(stage_backgrounds.get(current_stage, WHITE))
 
@@ -274,8 +277,8 @@ while running:
         timer_text = timer_font.render(time_string, True, BLACK)
         screen.blit(timer_text, (20, 20))
 
-        # Draw the player (a red circle) at the mouse position
-        pygame.draw.circle(screen, RED, player_pos, 15)
+        # Draw the player at the mouse position
+        screen.blit(player_image, player_rect)
 
     # --- Update the display ---
     pygame.display.flip()
