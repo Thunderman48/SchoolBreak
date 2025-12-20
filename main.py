@@ -86,6 +86,37 @@ credit_names = [
 ]
 credit_renders = []
 
+# --- Stage 1 Assets ---
+table_image = pygame.image.load('tem_table.png').convert_alpha()
+chair_image = pygame.image.load('tem_chair.png').convert_alpha()
+
+stage_obstacles = {
+    1: [],
+    2: [],
+    3: []
+}
+
+# Assuming a grid layout based on the original obstacle layout
+for row in range(6):
+    for col in range(5):
+        # Add a table
+        table_rect = table_image.get_rect(
+            topleft=(
+                (screen_width / 6) * (col + 0.5),
+                (screen_height / 7) * (row + 1)
+            )
+        )
+        stage_obstacles[1].append({'image': table_image, 'rect': table_rect})
+
+        # Add a chair above the table
+        chair_rect = chair_image.get_rect(
+            midbottom=(
+                table_rect.centerx,
+                table_rect.top
+            )
+        )
+        stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect})
+
 # Stage-specific settings
 stage_backgrounds = {
     1: WHITE,
@@ -98,18 +129,6 @@ stage_goals = {
     1: pygame.Rect(screen_width - 220, screen_height - 30, 200, 30), # Bottom-right for stage 1
     2: pygame.Rect(0, 0, 50, screen_height),                         # Left edge for stage 2
     3: pygame.Rect(20, 80, screen_width // 3, 40)                     # Top-left for stage 3, a bit wider
-}
-
-# Define obstacles for each stage
-stage_obstacles = {
-    1: [pygame.Rect(
-            (screen_width / 6) * (col + 0.5),  # x position
-            (screen_height / 7) * (row + 1),   # y position
-            100,                               # width
-            50                                 # height
-        ) for row in range(6) for col in range(5)],
-    2: [],
-    3: []
 }
 # 4. Main game loop
 while running:
@@ -162,8 +181,12 @@ while running:
     if game_state == 'game':
         # Check for collision with obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
-            if player_rect.colliderect(obstacle):
-                game_state = 'game_over'
+            if isinstance(obstacle, dict):
+                if player_rect.colliderect(obstacle['rect']):
+                    game_state = 'game_over'
+            else:
+                if player_rect.colliderect(obstacle):
+                    game_state = 'game_over'
         # Get the goal for the current stage
         current_goal_rect = stage_goals.get(current_stage)
         # Check if the player touches the goal area
@@ -265,7 +288,10 @@ while running:
 
         # Draw the obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
-            pygame.draw.rect(screen, BLACK, obstacle)
+            if isinstance(obstacle, dict):
+                screen.blit(obstacle['image'], obstacle['rect'])
+            else:
+                pygame.draw.rect(screen, BLACK, obstacle)
 
         # Draw the timer
         elapsed_time = pygame.time.get_ticks() - start_time
