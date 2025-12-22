@@ -43,6 +43,7 @@ title_rect = title_image.get_rect(topleft=(0, 0))
 player_image = pygame.image.load('test_image.png').convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 70))
 player_rect = player_image.get_rect()
+player_mask = pygame.mask.from_surface(player_image)
 
 # Button positioning
 start_rect = pygame.Rect(30, 94, 146, 84)
@@ -81,8 +82,12 @@ credit_names = [
 credit_renders = []
 
 # --- Stage 1 Assets ---
+stage_1_background_image = pygame.image.load('stage_1_background.png').convert()
+stage_1_background_image = pygame.transform.scale(stage_1_background_image, (screen_width, screen_height))
 table_image = pygame.image.load('tem_table.png').convert_alpha()
 chair_image = pygame.image.load('tem_chair.png').convert_alpha()
+table_mask = pygame.mask.from_surface(table_image)
+chair_mask = pygame.mask.from_surface(chair_image)
 
 stage_obstacles = {
     1: [],
@@ -103,22 +108,22 @@ chair_coords = [
 
 for pos in table_coords:
     table_rect = table_image.get_rect(topleft=pos)
-    stage_obstacles[1].append({'image': table_image, 'rect': table_rect})
+    stage_obstacles[1].append({'image': table_image, 'rect': table_rect, 'mask': table_mask})
 
 for pos in chair_coords:
     chair_rect = chair_image.get_rect(topleft=pos)
-    stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect})
+    stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect, 'mask': chair_mask})
 
 # Stage-specific settings
 stage_backgrounds = {
-    1: WHITE,
+    1: stage_1_background_image,
     2: (200, 200, 255), # A light blue for stage 2
     3: (200, 255, 200), # A light green for stage 3
 }
 
 # Define goals for each stage
 stage_goals = {
-    1: pygame.Rect(screen_width - 220, screen_height - 30, 200, 30), # Bottom-right for stage 1
+    1: pygame.Rect(1118, 820, 315, 45), # Bottom-right for stage 1
     2: pygame.Rect(0, 0, 50, screen_height),                         # Left edge for stage 2
     3: pygame.Rect(20, 80, screen_width // 3, 40)                     # Top-left for stage 3, a bit wider
 }
@@ -173,7 +178,12 @@ while running:
 
         # Check for collision with obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
-            if isinstance(obstacle, dict):
+            if isinstance(obstacle, dict) and 'mask' in obstacle:
+                offset_x = obstacle['rect'].x - player_rect.x
+                offset_y = obstacle['rect'].y - player_rect.y
+                if player_mask.overlap(obstacle['mask'], (offset_x, offset_y)):
+                    game_state = 'game_over'
+            elif isinstance(obstacle, dict):
                 if player_rect.colliderect(obstacle['rect']):
                     game_state = 'game_over'
             else:
@@ -212,7 +222,11 @@ while running:
 
     elif game_state == 'fade_out':
         # Draw the last game frame
-        screen.fill(stage_backgrounds.get(current_stage, WHITE))
+        background = stage_backgrounds.get(current_stage, WHITE)
+        if isinstance(background, pygame.Surface):
+            screen.blit(background, (0, 0))
+        else:
+            screen.fill(background)
         current_goal_rect = stage_goals.get(current_stage)
         pygame.draw.rect(screen, GREEN, current_goal_rect)
         
@@ -279,7 +293,11 @@ while running:
     elif game_state == 'game':
         pygame.mouse.set_visible(False)
         # Set the background color based on the current stage
-        screen.fill(stage_backgrounds.get(current_stage, WHITE))
+        background = stage_backgrounds.get(current_stage, WHITE)
+        if isinstance(background, pygame.Surface):
+            screen.blit(background, (0, 0))
+        else:
+            screen.fill(background)
 
         # Draw the goal area for the current stage
         current_goal_rect = stage_goals.get(current_stage)
