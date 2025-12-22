@@ -36,24 +36,18 @@ title_font = pygame.font.Font(None, 120)
 button_font = pygame.font.Font(None, 80)
 timer_font = pygame.font.Font(None, 50)
 
-title_image = pygame.image.load('title.png').convert_alpha()
-title_rect = title_image.get_rect(bottomright=(screen_width - 20, screen_height - 20))
+title_image = pygame.image.load('title_screen.png').convert()
+title_image = pygame.transform.scale(title_image, (screen_width, screen_height))
+title_rect = title_image.get_rect(topleft=(0, 0))
 
 player_image = pygame.image.load('test_image.png').convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 70))
+player_rect = player_image.get_rect()
 
 # Button positioning
-y_pos = 20
-start_text = button_font.render("Start", True, WHITE)
-start_rect = start_text.get_rect(topleft=(20, y_pos))
-
-y_pos += start_rect.height + 20
-credits_text = button_font.render("Credits", True, WHITE)
-credits_rect = credits_text.get_rect(topleft=(20, y_pos))
-
-y_pos += credits_rect.height + 20
-quit_text = button_font.render("Quit", True, WHITE)
-quit_rect = quit_text.get_rect(topleft=(20, y_pos))
+start_rect = pygame.Rect(30, 94, 146, 84)
+credits_rect = pygame.Rect(39, 196, 129, 83)
+quit_rect = pygame.Rect(44, 296, 135, 81)
 
 credits_content_text = title_font.render("Made by NEXTLAB", True, WHITE)
 credits_content_rect = credits_content_text.get_rect(center=(screen_width / 2, screen_height / 2))
@@ -99,7 +93,7 @@ stage_obstacles = {
 table_coords = [
     (301, 156), (261, 679), (343, 700), (593, 451), (618, 750),
     (812, 700), (923, 241), (1175, 730), (1258, 449), (1400, 223),
-    (100, 100), (100, 300), (100, 500), (1000, 100), (1000, 500)
+    (100, 300), (100, 300), (100, 500), (1000, 100), (1000, 500)
 ]
 chair_coords = [
     (187, 750), (711, 226), (1006, 700), (1394, 730), (1349, 199),
@@ -170,13 +164,13 @@ while running:
                 credit_renders = [] # Clear credits for next time
 
     # --- Game Logic ---
-    # Get mouse position to use as the character's position
-    player_pos = pygame.mouse.get_pos()
-
-    # Create a rect for the player for collision detection, centered on the mouse
-    player_rect = player_image.get_rect(center=player_pos)
-
     if game_state == 'game':
+        # Get mouse position to use as the character's position
+        player_pos = pygame.mouse.get_pos()
+
+        # Create a rect for the player for collision detection, centered on the mouse
+        player_rect = player_image.get_rect(center=player_pos)
+
         # Check for collision with obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
             if isinstance(obstacle, dict):
@@ -200,12 +194,11 @@ while running:
     # --- Drawing ---
     if game_state == 'start_menu':
         pygame.mouse.set_visible(True)
-        screen.fill(BLACK)
-        # Draw title and buttons
+        # Draw title image
         screen.blit(title_image, title_rect)
-        screen.blit(start_text, start_rect)
-        screen.blit(credits_text, credits_rect)
-        screen.blit(quit_text, quit_rect)
+        
+        
+        # The buttons are now invisible but still clickable.
 
     elif game_state == 'credits':
         pygame.mouse.set_visible(True)
@@ -222,6 +215,14 @@ while running:
         screen.fill(stage_backgrounds.get(current_stage, WHITE))
         current_goal_rect = stage_goals.get(current_stage)
         pygame.draw.rect(screen, GREEN, current_goal_rect)
+        
+        # Draw the obstacles
+        for obstacle in stage_obstacles.get(current_stage, []):
+            if isinstance(obstacle, dict):
+                screen.blit(obstacle['image'], obstacle['rect'])
+            else:
+                pygame.draw.rect(screen, BLACK, obstacle)
+        
         screen.blit(player_image, player_rect)
 
         # Increase alpha and draw the fade surface
