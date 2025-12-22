@@ -97,12 +97,14 @@ stage_obstacles = {
 }
 
 table_coords = [
-    (301, 156), (261, 679), (343, 1002), (593, 451), (618, 1071),
-    (812, 841), (923, 241), (1175, 993), (1258, 449), (1537, 223)
+    (301, 156), (261, 679), (343, 700), (593, 451), (618, 750),
+    (812, 700), (923, 241), (1175, 730), (1258, 449), (1400, 223),
+    (100, 100), (100, 300), (100, 500), (1000, 100), (1000, 500)
 ]
 chair_coords = [
-    (187, 1038), (711, 226), (1006, 1102), (1394, 828), (1349, 199),
-    (1762, 643)
+    (187, 750), (711, 226), (1006, 700), (1394, 730), (1349, 199),
+    (1430, 643), (200, 100), (200, 300), (200, 500), (1100, 100),
+    (1100, 500)
 ]
 
 for pos in table_coords:
@@ -171,8 +173,8 @@ while running:
     # Get mouse position to use as the character's position
     player_pos = pygame.mouse.get_pos()
 
-    # Create a rect for the player for collision detection
-    player_rect = pygame.Rect(player_pos[0] - 25, player_pos[1] - 25, 50, 50)
+    # Create a rect for the player for collision detection, centered on the mouse
+    player_rect = player_image.get_rect(center=player_pos)
 
     if game_state == 'game':
         # Check for collision with obstacles
@@ -186,7 +188,7 @@ while running:
         # Get the goal for the current stage
         current_goal_rect = stage_goals.get(current_stage)
         # Check if the player touches the goal area
-        if current_goal_rect and current_goal_rect.collidepoint(player_pos):
+        if current_goal_rect and player_rect.colliderect(current_goal_rect):
             if current_stage < len(stage_backgrounds):
                 current_stage += 1
             else:
