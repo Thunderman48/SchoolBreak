@@ -40,7 +40,7 @@ title_image = pygame.image.load('title.png').convert_alpha()
 title_rect = title_image.get_rect(bottomright=(screen_width - 20, screen_height - 20))
 
 player_image = pygame.image.load('test_image.png').convert_alpha()
-player_image = pygame.transform.scale(player_image, (50, 50))
+player_image = pygame.transform.scale(player_image, (50, 70))
 
 # Button positioning
 y_pos = 20
@@ -96,26 +96,22 @@ stage_obstacles = {
     3: []
 }
 
-# Assuming a grid layout based on the original obstacle layout
-for row in range(6):
-    for col in range(5):
-        # Add a table
-        table_rect = table_image.get_rect(
-            topleft=(
-                (screen_width / 6) * (col + 0.5),
-                (screen_height / 7) * (row + 1)
-            )
-        )
-        stage_obstacles[1].append({'image': table_image, 'rect': table_rect})
+table_coords = [
+    (301, 156), (261, 679), (343, 1002), (593, 451), (618, 1071),
+    (812, 841), (923, 241), (1175, 993), (1258, 449), (1537, 223)
+]
+chair_coords = [
+    (187, 1038), (711, 226), (1006, 1102), (1394, 828), (1349, 199),
+    (1762, 643)
+]
 
-        # Add a chair above the table
-        chair_rect = chair_image.get_rect(
-            midbottom=(
-                table_rect.centerx,
-                table_rect.top
-            )
-        )
-        stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect})
+for pos in table_coords:
+    table_rect = table_image.get_rect(topleft=pos)
+    stage_obstacles[1].append({'image': table_image, 'rect': table_rect})
+
+for pos in chair_coords:
+    chair_rect = chair_image.get_rect(topleft=pos)
+    stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect})
 
 # Stage-specific settings
 stage_backgrounds = {
@@ -314,3 +310,5 @@ while running:
 
 # 5. Quit Pygame
 pygame.quit()
+
+
