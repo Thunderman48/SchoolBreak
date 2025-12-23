@@ -362,7 +362,7 @@ trash_1_mask = pygame.mask.from_surface(trash_1_image)
 trash_2_mask = pygame.mask.from_surface(trash_2_image)
 puddle_mask = pygame.mask.from_surface(puddle_image)
 
-death_lasershot_image = pygame.image.load('death_lasershot.png').convert()
+death_lasershot_image = pygame.image.load('death_expload.png').convert()
 death_lasershot_image = pygame.transform.scale(death_lasershot_image, (screen_width, screen_height))
 
 spider_h_images = [
