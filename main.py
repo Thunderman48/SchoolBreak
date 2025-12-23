@@ -77,6 +77,46 @@ player_image = player_images[player_frame]
 player_rect = player_image.get_rect()
 player_mask = pygame.mask.from_surface(player_image)
 
+class MovingObstacle:
+    def __init__(self, start_pos, end_pos, images_left, images_right):
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.images_left = images_left
+        self.images_right = images_right
+        self.rect = self.images_left[0].get_rect(topleft=start_pos)
+        self.speed = 3
+        self.moving_right = True
+        self.animation_frame = 0
+        self.animation_speed = 15  # Slower animation
+        self.animation_timer = 0
+        self.image = self.images_right[0]
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self):
+        # Movement
+        if self.moving_right:
+            self.rect.x += self.speed
+            if self.rect.x >= self.end_pos[0]:
+                self.moving_right = False
+        else:
+            self.rect.x -= self.speed
+            if self.rect.x <= self.start_pos[0]:
+                self.moving_right = True
+
+        # Animation
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.animation_frame = (self.animation_frame + 1) % 2
+            if self.moving_right:
+                self.image = self.images_right[self.animation_frame]
+            else:
+                self.image = self.images_left[self.animation_frame]
+            self.mask = pygame.mask.from_surface(self.image)
+    
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
+
 # Button positioning
 start_rect = pygame.Rect(30, 94, 146, 84)
 credits_rect = pygame.Rect(39, 196, 129, 83)
@@ -142,12 +182,30 @@ trash_1_mask = pygame.mask.from_surface(trash_1_image)
 trash_2_mask = pygame.mask.from_surface(trash_2_image)
 puddle_mask = pygame.mask.from_surface(puddle_image)
 
+student_images_left = [
+    pygame.transform.scale(pygame.image.load('student_1.png').convert_alpha(), (100, 140)),
+    pygame.transform.scale(pygame.image.load('student_2.png').convert_alpha(), (100, 140))
+]
+student_images_right = [
+    pygame.transform.scale(pygame.image.load('student_3.png').convert_alpha(), (100, 140)),
+    pygame.transform.scale(pygame.image.load('student_4.png').convert_alpha(), (100, 140))
+]
+
+moving_obstacles = {
+    1: [],
+    2: [
+        MovingObstacle(start_pos=(829, 700), end_pos=(1487, 700), images_left=student_images_left, images_right=student_images_right),
+        MovingObstacle(start_pos=(17, 187), end_pos=(678, 187), images_left=student_images_left, images_right=student_images_right)
+    ],
+    3: []
+}
+
 stage_obstacles = {
     1: [],
     2: [
-        {'image': trash_1_image, 'rect': trash_1_image.get_rect(topleft=(1311,430)), 'mask': trash_1_mask, 'death_image': death_slip_image},
-        {'image': trash_2_image, 'rect': trash_2_image.get_rect(topleft=(820,656)), 'mask': trash_2_mask, 'death_image': death_slip_image},
-        {'image': puddle_image, 'rect': puddle_image.get_rect(topleft=(319,466)), 'mask': puddle_mask, 'death_image': death_slip_image}
+        {'image': trash_1_image, 'rect': trash_1_image.get_rect(topleft=(1311,430)), 'mask': trash_1_mask, 'death_image_path': 'death_slip.png'},
+        {'image': trash_2_image, 'rect': trash_2_image.get_rect(topleft=(820,656)), 'mask': trash_2_mask, 'death_image_path': 'death_slip.png'},
+        {'image': puddle_image, 'rect': puddle_image.get_rect(topleft=(319,466)), 'mask': puddle_mask, 'death_image_path': 'death_slip.png'}
     ],
     3: []
 }
@@ -165,11 +223,13 @@ chair_coords = [
 
 for pos in table_coords:
     table_rect = table_image.get_rect(topleft=pos)
-    stage_obstacles[1].append({'image': table_image, 'rect': table_rect, 'mask': table_mask})
+    stage_obstacles[1].append({'image': table_image, 'rect': table_rect, 'mask': table_mask, 'death_image_path': 'death_hit.png'})
 
 for pos in chair_coords:
     chair_rect = chair_image.get_rect(topleft=pos)
-    stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect, 'mask': chair_mask})
+    stage_obstacles[1].append({'image': chair_image, 'rect': chair_rect, 'mask': chair_mask, 'death_image': default_game_over_image})
+
+
 
 # Stage-specific settings
 stage_backgrounds = {
@@ -238,6 +298,9 @@ while running:
 
     # --- Game Logic ---
     if game_state == 'game':
+        for obstacle in moving_obstacles.get(current_stage, []):
+            obstacle.update()
+
         player_animation_timer += 1
         if player_animation_timer >= player_animation_speed:
             player_animation_timer = 0
@@ -265,8 +328,9 @@ while running:
                 offset_y = obstacle['rect'].y - player_rect.y
                 if player_mask.overlap(obstacle['mask'], (offset_x, offset_y)):
                     collision = True
-                    if 'death_image' in obstacle:
-                        game_over_image = obstacle['death_image']
+                    if 'death_image_path' in obstacle:
+                        game_over_image = pygame.image.load(obstacle['death_image_path']).convert()
+                        game_over_image = pygame.transform.scale(game_over_image, (screen_width, screen_height))
                     else:
                         game_over_image = default_game_over_image
             elif isinstance(obstacle, dict):
@@ -281,6 +345,17 @@ while running:
             if collision:
                 game_state = 'game_over'
                 break # Exit loop once a collision is found
+        
+        if game_state == 'game_over': break # Skip checking moving obstacles if already game over
+
+        for obstacle in moving_obstacles.get(current_stage, []):
+            offset_x = obstacle.rect.x - player_rect.x
+            offset_y = obstacle.rect.y - player_rect.y
+            if player_mask.overlap(obstacle.mask, (offset_x, offset_y)):
+                game_over_image = default_game_over_image # Or a specific one for students
+                game_state = 'game_over'
+                break
+
         # Get the goal for the current stage
         current_goal_rect = stage_goals.get(current_stage)
         # Check if the player touches the goal area
@@ -370,6 +445,9 @@ while running:
             else:
                 pygame.draw.rect(screen, BLACK, obstacle)
         
+        for obstacle in moving_obstacles.get(current_stage, []):
+            obstacle.draw(screen)
+        
         screen.blit(player_image, player_rect)
 
         # Increase alpha and draw the fade surface
@@ -434,15 +512,15 @@ while running:
 
         # Draw the goal area for the current stage
         current_goal_rect = stage_goals.get(current_stage)
-        if current_stage !=1:
-            pygame.draw.rect(screen, GREEN, current_goal_rect)
-
         # Draw the obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
             if isinstance(obstacle, dict):
                 screen.blit(obstacle['image'], obstacle['rect'])
             else:
                 pygame.draw.rect(screen, BLACK, obstacle)
+
+        for obstacle in moving_obstacles.get(current_stage, []):
+            obstacle.draw(screen)
 
         # Draw the timer
         elapsed_time = pygame.time.get_ticks() - start_time
