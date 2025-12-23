@@ -31,6 +31,17 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
+# --- Cutscene Assets ---
+cutscene_images = ['tem_cut_1.png', 'tem_cut_2.png', 'tem_cut_3.png']
+cutscenes = [pygame.image.load(img).convert() for img in cutscene_images]
+cutscene_index = 0
+CUTSCENE_DURATION = 3000  # 3 seconds
+FADE_SPEED = 5
+cutscene_state = 'fading_in'
+cutscene_timer = 0
+cutscene_fade_alpha = 255
+
+
 # --- Menu Assets ---
 title_font = pygame.font.Font(None, 120)
 button_font = pygame.font.Font(None, 80)
@@ -165,14 +176,18 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == 'start_menu':
                 if start_rect.collidepoint(event.pos):
-                    game_state = 'game' # Start the game
-                    start_time = pygame.time.get_ticks() # Start the timer
+                    game_state = 'cutscene' # Start the cutscene
+                    cutscene_index = 0
                 elif credits_rect.collidepoint(event.pos):
                     game_state = 'credits' # Go to credits
                 elif quit_rect.collidepoint(event.pos):
                     running = False # Quit the game
             elif game_state == 'credits':
                 game_state = 'start_menu' # Click anywhere to go back
+            elif game_state == 'cutscene':
+                if cutscene_state == 'showing': # Only allow skipping when the scene is fully visible
+                    cutscene_state = 'fading_out'
+                    cutscene_timer = 0
             elif game_state == 'game_over':
                 # Click to go back to the main menu
                 game_state = 'start_menu'
@@ -245,6 +260,44 @@ while running:
         
         
         # The buttons are now invisible but still clickable.
+
+    elif game_state == 'cutscene':
+        pygame.mouse.set_visible(True)
+
+        # --- Cutscene Logic ---
+        if cutscene_state == 'fading_in':
+            cutscene_fade_alpha -= FADE_SPEED
+            if cutscene_fade_alpha <= 0:
+                cutscene_fade_alpha = 0
+                cutscene_state = 'showing'
+                cutscene_timer = pygame.time.get_ticks()
+        
+        elif cutscene_state == 'showing':
+            if pygame.time.get_ticks() - cutscene_timer > CUTSCENE_DURATION:
+                cutscene_state = 'fading_out'
+
+        elif cutscene_state == 'fading_out':
+            cutscene_fade_alpha += FADE_SPEED
+            if cutscene_fade_alpha >= 255:
+                cutscene_fade_alpha = 255
+                cutscene_index += 1
+                if cutscene_index >= len(cutscenes):
+                    game_state = 'game'
+                    start_time = pygame.time.get_ticks()
+                else:
+                    cutscene_state = 'fading_in'
+
+        # --- Cutscene Drawing ---
+        # Draw the current cutscene image, scaled to fit the screen
+        if cutscene_index < len(cutscenes):
+            cutscene_image = pygame.transform.scale(cutscenes[cutscene_index], (screen_width, screen_height))
+            screen.blit(cutscene_image, (0, 0))
+
+        # Draw the fade surface
+        fade_surface.set_alpha(cutscene_fade_alpha)
+        fade_surface.fill(BLACK)
+        screen.blit(fade_surface, (0, 0))
+
 
     elif game_state == 'credits':
         pygame.mouse.set_visible(True)
