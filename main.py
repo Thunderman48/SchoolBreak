@@ -65,6 +65,7 @@ player_images_left = [
     pygame.image.load('player_4.png').convert_alpha()
 ]
 player_images = player_images_right # Start by facing right
+player_direction = 'right' # New variable to track direction
 
 player_images_right = [pygame.transform.scale(img, (100, 140)) for img in player_images_right]
 player_images_left = [pygame.transform.scale(img, (100, 140)) for img in player_images_left]
@@ -134,22 +135,25 @@ game_over_rect = game_over_text.get_rect(center=(screen_width / 2, screen_height
 # --- Ending Credits Assets ---
 credit_names = [
     "Game Director",
-    "???",
+    "Patrick Yang",
     "",
     "Lead Programmer",
-    "???",
+    "Yoon Ha Ji",
     "",
     "Character Design",
-    "???",
+    "Story Art",
     "",
-    "Music",
-    "???",
+    "Art Director",
+    "Sung Hoon Choi",
     "",
-    "Sound Effects",
-    "???",
+    "Our Team",
+    "Haeun Kim",
+    "Yewon Kim",
+    "Si woon Kim",
+    "He Hoo Shin",
     "",
-    "Art",
-    "???",
+    "Dog",
+    "Rouis",
     "",
     "Special Thanks",
     "You!"
@@ -161,6 +165,8 @@ stage_1_background_image = pygame.image.load('stage_1_background.png').convert()
 stage_1_background_image = pygame.transform.scale(stage_1_background_image, (screen_width, screen_height))
 stage_2_background_image = pygame.image.load('stage_2_bakcground.png').convert()
 stage_2_background_image = pygame.transform.scale(stage_2_background_image, (screen_width, screen_height))
+stage_3_background_image = pygame.image.load('stage_3_background.png').convert()
+stage_3_background_image = pygame.transform.scale(stage_3_background_image, (screen_width, screen_height))
 table_image = pygame.image.load('table.png').convert_alpha()
 table_size = table_image.get_size()
 table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.4), int(table_size[1] * 0.4)))
@@ -235,14 +241,14 @@ for pos in chair_coords:
 stage_backgrounds = {
     1: stage_1_background_image,
     2: stage_2_background_image, # A light blue for stage 2
-    3: (200, 255, 200), # A light green for stage 3
+    3: stage_3_background_image
 }
 
 # Define goals for each stage
 stage_goals = {
     1: pygame.Rect(1118, 820, 315, 45), # Bottom-right for stage 1
     2: pygame.Rect(0, 0, 314, 110),                         # Left edge for stage 2
-    3: pygame.Rect(20, 80, screen_width // 3, 40)                     # Top-left for stage 3, a bit wider
+    3: pygame.Rect(0, 650, 10, 864)
 }
 # 4. Main game loop
 while running:
@@ -311,15 +317,19 @@ while running:
         # Get mouse position to use as the character's position
         player_pos = pygame.mouse.get_pos()
         current_mouse_x = player_pos[0]
-        if current_mouse_x < last_mouse_x:
+        
+        if current_mouse_x < last_mouse_x and player_direction != 'left':
             player_images = player_images_left
-        elif current_mouse_x > last_mouse_x:
+            player_direction = 'left'
+        elif current_mouse_x > last_mouse_x and player_direction != 'right':
             player_images = player_images_right
+            player_direction = 'right'
         last_mouse_x = current_mouse_x
 
         # Create a rect for the player for collision detection, centered on the mouse
         player_rect = player_image.get_rect(center=player_pos)
 
+        
         # Check for collision with obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
             collision = False
@@ -345,8 +355,6 @@ while running:
             if collision:
                 game_state = 'game_over'
                 break # Exit loop once a collision is found
-        
-        if game_state == 'game_over': break # Skip checking moving obstacles if already game over
 
         for obstacle in moving_obstacles.get(current_stage, []):
             offset_x = obstacle.rect.x - player_rect.x
