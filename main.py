@@ -38,6 +38,8 @@ cutscene_images = ['tem_cut_1.png', 'tem_cut_2.png', 'tem_cut_3.png']
 cutscenes = [pygame.image.load(img).convert() for img in cutscene_images]
 stage_6_cutscene_images = ['cut_4.jpg', 'cut_5.jpg', 'cut_6.jpg']
 stage_6_cutscenes = [pygame.image.load(img).convert() for img in stage_6_cutscene_images]
+stage_8_cutscene_images = ['cut_parkingexit.png', 'cut_ending.png']
+stage_8_cutscenes = [pygame.image.load(img).convert() for img in stage_8_cutscene_images]
 current_cutscene_batch = []
 cutscene_index = 0
 CUTSCENE_DURATION = 3000  # 3 seconds
@@ -535,7 +537,7 @@ stage_goals = {
     5: [{'rect': pygame.Rect(307, 0, 235, 46), 'dest': 6}],
     6: [{'rect': pygame.Rect(-10, 12, 290, 292), 'dest': 99}], # Win condition
     7: [{'rect': pygame.Rect(1171, 697, 84, 103), 'dest': 8}], # To stage 8
-    8: [{'rect': pygame.Rect(0, 0, 150, 106), 'dest': 99}], # New stage 8, win condition
+    8: [{'rect': pygame.Rect(0, 0, 150, 106), 'dest': 100}], # Stage 8 win condition
     's-1': [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}] # Win condition
 }
 # 4. Main game loop
@@ -664,7 +666,7 @@ while running:
                 elif laser_state == 'cooldown' and now - laser_timer > 700:
                     laser_state = 'firing'
                     laser_timer = now
-                elif laser_state == 'firing' and now - laser_timer > 300:
+                elif laser_state == 'firing' and now - laser_timer > 400:
                     laser_state = 'cooldown'
                     laser_timer = now
                     laser_index += 1
@@ -771,6 +773,14 @@ while running:
                             cutscene_state = 'fading_in'
                             cutscene_fade_alpha = 255
                             cutscene_timer = 0
+                        elif destination == 100:
+                            final_time = pygame.time.get_ticks() - start_time
+                            current_cutscene_batch = stage_8_cutscenes
+                            game_state = 'cutscene'
+                            cutscene_index = 0
+                            cutscene_state = 'fading_in'
+                            cutscene_fade_alpha = 255
+                            cutscene_timer = 0
                         else:
                             final_time = pygame.time.get_ticks() - start_time
                             game_state = 'fade_out'
@@ -808,7 +818,11 @@ while running:
                 cutscene_fade_alpha = 255
                 cutscene_index += 1
                 if cutscene_index >= len(current_cutscene_batch):
-                    game_state = 'cut_after' # Transition to the new cut_after screen
+                    if current_cutscene_batch == stage_8_cutscenes:
+                        final_time = pygame.time.get_ticks() - start_time
+                        game_state = 'fade_out'
+                    else:
+                        game_state = 'cut_after' # Transition to the new cut_after screen
                 else:
                     cutscene_state = 'fading_in'
 
