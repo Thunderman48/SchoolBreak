@@ -344,6 +344,9 @@ stage_6_background_image = pygame.image.load('stage_6.png').convert()
 stage_6_background_image = pygame.transform.scale(stage_6_background_image, (screen_width, screen_height))
 stage_underground_image = pygame.image.load('stage_underground.png').convert()
 stage_underground_image = pygame.transform.scale(stage_underground_image, (screen_width, screen_height))
+stage_parking_background_image = pygame.image.load('stage_parking.png').convert()
+stage_parking_background_image = pygame.transform.scale(stage_parking_background_image, (screen_width, screen_height))
+
 table_image = pygame.image.load('table.png').convert_alpha()
 table_size = table_image.get_size()
 table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.4), int(table_size[1] * 0.4)))
@@ -491,6 +494,7 @@ stage_backgrounds = {
     5: stage_5_background_image,
     6: stage_6_background_image,
     7: stage_underground_image,
+    8: stage_parking_background_image,
     's-1': stage_underground_image
 }
 
@@ -530,7 +534,8 @@ stage_goals = {
     ],
     5: [{'rect': pygame.Rect(307, 0, 235, 46), 'dest': 6}],
     6: [{'rect': pygame.Rect(-10, 12, 290, 292), 'dest': 99}], # Win condition
-    7: [{'rect': pygame.Rect(screen_width - 50, 0, 50, screen_height), 'dest': 99}], # Win condition
+    7: [{'rect': pygame.Rect(1171, 697, 84, 103), 'dest': 8}], # To stage 8
+    8: [{'rect': pygame.Rect(0, 0, 150, 106), 'dest': 99}], # New stage 8, win condition
     's-1': [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}] # Win condition
 }
 # 4. Main game loop
@@ -574,8 +579,9 @@ while running:
                     cutscene_timer = 0
             elif game_state == 'game_over':
                 # Click to go back to the main menu
-                for obstacle in special_obstacles.get(current_stage, []):
-                    obstacle.reset()
+                for stage_key in special_obstacles:
+                    for obstacle in special_obstacles[stage_key]:
+                        obstacle.reset()
                 for stage_key in moving_obstacles:
                     for obstacle in moving_obstacles[stage_key]:
                         obstacle.reset()
