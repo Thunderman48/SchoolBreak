@@ -40,8 +40,16 @@ title_image = pygame.image.load('title_screen.png').convert()
 title_image = pygame.transform.scale(title_image, (screen_width, screen_height))
 title_rect = title_image.get_rect(topleft=(0, 0))
 
-player_image = pygame.image.load('test_image.png').convert_alpha()
-player_image = pygame.transform.scale(player_image, (50, 70))
+player_images = [
+    pygame.image.load('player_1.png').convert_alpha(),
+    pygame.image.load('player_2.png').convert_alpha()
+]
+player_images = [pygame.transform.scale(img, (50, 70)) for img in player_images]
+player_frame = 0
+player_animation_speed = 10  # Change image every 10 frames
+player_animation_timer = 0
+
+player_image = player_images[player_frame]
 player_rect = player_image.get_rect()
 player_mask = pygame.mask.from_surface(player_image)
 
@@ -170,6 +178,13 @@ while running:
 
     # --- Game Logic ---
     if game_state == 'game':
+        player_animation_timer += 1
+        if player_animation_timer >= player_animation_speed:
+            player_animation_timer = 0
+            player_frame = (player_frame + 1) % len(player_images)
+            player_image = player_images[player_frame]
+            # Important: Update the mask with the new image
+            player_mask = pygame.mask.from_surface(player_image)
         # Get mouse position to use as the character's position
         player_pos = pygame.mouse.get_pos()
 
