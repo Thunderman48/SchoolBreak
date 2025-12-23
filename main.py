@@ -141,7 +141,7 @@ credit_names = [
     "Yoon Ha Ji",
     "",
     "Character Design",
-    "Story Art",
+    "Club Story Art",
     "",
     "Art Director",
     "Sung Hoon Choi",
@@ -155,7 +155,9 @@ credit_names = [
     "Dog",
     "Rouis",
     "",
-    "Special Thanks",
+    "Special Thanks to...",
+    "",
+    "",
     "You!"
 ]
 credit_renders = []
@@ -444,7 +446,8 @@ while running:
             screen.fill(background)
         current_goal_rect = stage_goals.get(current_stage)
         if current_stage != 1:
-            pygame.draw.rect(screen, GREEN, current_goal_rect)
+            # pygame.draw.rect(screen, GREEN, current_goal_rect)
+            pass
         
         # Draw the obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
