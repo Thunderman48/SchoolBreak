@@ -36,6 +36,9 @@ BLUE = (0, 0, 255)
 # --- Cutscene Assets ---
 cutscene_images = ['tem_cut_1.png', 'tem_cut_2.png', 'tem_cut_3.png']
 cutscenes = [pygame.image.load(img).convert() for img in cutscene_images]
+stage_6_cutscene_images = ['cut_4.jpg', 'cut_5.jpg', 'cut_6.jpg']
+stage_6_cutscenes = [pygame.image.load(img).convert() for img in stage_6_cutscene_images]
+current_cutscene_batch = []
 cutscene_index = 0
 CUTSCENE_DURATION = 3000  # 3 seconds
 FADE_SPEED = 5
@@ -335,6 +338,8 @@ stage_4_background_image = pygame.image.load('stage_4.jpg').convert()
 stage_4_background_image = pygame.transform.scale(stage_4_background_image, (screen_width, screen_height))
 stage_5_background_image = pygame.image.load('stage_5.png').convert()
 stage_5_background_image = pygame.transform.scale(stage_5_background_image, (screen_width, screen_height))
+stage_5_2_background_image = pygame.image.load('stage_5_2.png').convert()
+stage_5_2_background_image = pygame.transform.scale(stage_5_2_background_image, (screen_width, screen_height))
 stage_6_background_image = pygame.image.load('stage_6.png').convert()
 stage_6_background_image = pygame.transform.scale(stage_6_background_image, (screen_width, screen_height))
 stage_underground_image = pygame.image.load('stage_underground.png').convert()
@@ -356,6 +361,20 @@ death_slip_image = pygame.image.load('death_slip.png').convert()
 death_slip_image = pygame.transform.scale(death_slip_image, (screen_width, screen_height))
 hatch_open_image = pygame.image.load('hatch_open.png').convert_alpha()
 hatch_open_image = pygame.transform.scale(hatch_open_image, (290, 292))
+
+# --- Stage 6 Assets ---
+big_laser_image = pygame.image.load('big_laser.png').convert_alpha()
+laser_zones = [
+    pygame.Rect(0, 2, screen_width, 170),
+    pygame.Rect(0, 174, screen_width, 170),
+    pygame.Rect(0, 346, screen_width, 170),
+    pygame.Rect(0, 518, screen_width, 170),
+    pygame.Rect(0, 690, screen_width, 170)
+]
+laser_state = 'idle' # idle, first_cooldown, firing, cooldown
+laser_timer = 0
+laser_index = 0
+
 table_mask = pygame.mask.from_surface(table_image)
 chair_mask = pygame.mask.from_surface(chair_image)
 trash_1_mask = pygame.mask.from_surface(trash_1_image)
@@ -471,6 +490,7 @@ stage_backgrounds = {
     4: stage_4_background_image,
     5: stage_5_background_image,
     6: stage_6_background_image,
+    7: stage_underground_image,
     's-1': stage_underground_image
 }
 
@@ -510,6 +530,7 @@ stage_goals = {
     ],
     5: [{'rect': pygame.Rect(307, 0, 235, 46), 'dest': 6}],
     6: [{'rect': pygame.Rect(-10, 12, 290, 292), 'dest': 99}], # Win condition
+    7: [{'rect': pygame.Rect(screen_width - 50, 0, 50, screen_height), 'dest': 99}], # Win condition
     's-1': [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}] # Win condition
 }
 # 4. Main game loop
@@ -527,6 +548,7 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if game_state == 'start_menu':
                 if start_rect.collidepoint(event.pos):
+                    current_cutscene_batch = cutscenes
                     game_state = 'cutscene' # Start the cutscene
                     cutscene_index = 0
                     cutscene_state = 'fading_in'
@@ -538,8 +560,12 @@ while running:
                     running = False # Quit the game
             elif game_state == 'cut_after':
                 if cut_after_rect.collidepoint(event.pos):
-                    game_state = 'game'
-                    start_time = pygame.time.get_ticks()
+                    if current_cutscene_batch == stage_6_cutscenes:
+                        current_stage = 7
+                        game_state = 'game'
+                    else:
+                        game_state = 'game'
+                        start_time = pygame.time.get_ticks()
             elif game_state == 'credits':
                 game_state = 'start_menu' # Click anywhere to go back
             elif game_state == 'cutscene':
@@ -553,6 +579,9 @@ while running:
                 for stage_key in moving_obstacles:
                     for obstacle in moving_obstacles[stage_key]:
                         obstacle.reset()
+                stage_backgrounds[5] = stage_5_background_image
+                laser_index = 0
+                laser_state = 'idle'
                 game_state = 'start_menu'
                 current_stage = 1 # Reset stage
                 stage_6_hatch_triggered = False
@@ -620,6 +649,29 @@ while running:
             if player_rect.colliderect(trigger_rect):
                 stage_6_hatch_triggered = True
 
+            # Laser logic
+            if laser_index < len(laser_zones):
+                now = pygame.time.get_ticks()
+                if laser_state == 'first_cooldown' and now - laser_timer > 700:
+                    laser_state = 'firing'
+                    laser_timer = now
+                elif laser_state == 'cooldown' and now - laser_timer > 700:
+                    laser_state = 'firing'
+                    laser_timer = now
+                elif laser_state == 'firing' and now - laser_timer > 300:
+                    laser_state = 'cooldown'
+                    laser_timer = now
+                    laser_index += 1
+            
+            if laser_state == 'firing' and laser_index < len(laser_zones):
+                laser_rect = laser_zones[laser_index]
+                if player_rect.colliderect(laser_rect):
+                    game_over_image = death_lasershot_image
+                    game_state = 'game_over'
+
+        if current_stage == 5:
+            if 36 <= player_pos[0] <= 164 and 663 <= player_pos[1] <= 795:
+                stage_backgrounds[5] = stage_5_2_background_image
         
         # Check for collision with stage 3 game over zones
         if current_stage == 3:
@@ -700,10 +752,22 @@ while running:
                         current_stage = destination
                         if destination == 6: # Reset hatch when entering stage 6
                             stage_6_hatch_triggered = False
+                            laser_state = 'first_cooldown' # Start the laser sequence
+                            laser_index = 0
+                            laser_timer = pygame.time.get_ticks()
                     else:
                         # If destination doesn't exist, it's a win condition
-                        final_time = pygame.time.get_ticks() - start_time
-                        game_state = 'fade_out'
+                        if current_stage == 6:
+                            final_time = pygame.time.get_ticks() - start_time
+                            current_cutscene_batch = stage_6_cutscenes
+                            game_state = 'cutscene'
+                            cutscene_index = 0
+                            cutscene_state = 'fading_in'
+                            cutscene_fade_alpha = 255
+                            cutscene_timer = 0
+                        else:
+                            final_time = pygame.time.get_ticks() - start_time
+                            game_state = 'fade_out'
                     break # Goal was reached, no need to check others
 
 
@@ -737,15 +801,15 @@ while running:
             if cutscene_fade_alpha >= 255:
                 cutscene_fade_alpha = 255
                 cutscene_index += 1
-                if cutscene_index >= len(cutscenes):
+                if cutscene_index >= len(current_cutscene_batch):
                     game_state = 'cut_after' # Transition to the new cut_after screen
                 else:
                     cutscene_state = 'fading_in'
 
         # --- Cutscene Drawing ---
         # Draw the current cutscene image, scaled to fit the screen
-        if cutscene_index < len(cutscenes):
-            cutscene_image = pygame.transform.scale(cutscenes[cutscene_index], (screen_width, screen_height))
+        if cutscene_index < len(current_cutscene_batch):
+            cutscene_image = pygame.transform.scale(current_cutscene_batch[cutscene_index], (screen_width, screen_height))
             screen.blit(cutscene_image, (0, 0))
 
         # Draw the fade surface
@@ -868,6 +932,11 @@ while running:
 
         if current_stage == 6 and stage_6_hatch_triggered:
             screen.blit(hatch_open_image, (-10, 12))
+
+        if current_stage == 6 and laser_state == 'firing' and laser_index < len(laser_zones):
+            laser_rect = laser_zones[laser_index]
+            scaled_laser_image = pygame.transform.scale(big_laser_image, (laser_rect.width, laser_rect.height))
+            screen.blit(scaled_laser_image, laser_rect.topleft)
 
         # Draw the timer
         elapsed_time = pygame.time.get_ticks() - start_time
