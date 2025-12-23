@@ -152,6 +152,9 @@ credit_names = [
     "Si woon Kim",
     "He Hoo Shin",
     "",
+    "Art Slave 1",
+    "Sung Hoon Choi"
+    "",
     "Dog",
     "Rouis",
     "",
@@ -169,6 +172,10 @@ stage_2_background_image = pygame.image.load('stage_2_bakcground.png').convert()
 stage_2_background_image = pygame.transform.scale(stage_2_background_image, (screen_width, screen_height))
 stage_3_background_image = pygame.image.load('stage_3_background.png').convert()
 stage_3_background_image = pygame.transform.scale(stage_3_background_image, (screen_width, screen_height))
+stage_4_background_image = pygame.image.load('stage_4.jpg').convert()
+stage_4_background_image = pygame.transform.scale(stage_4_background_image, (screen_width, screen_height))
+stage_underground_image = pygame.image.load('stage_underground.png').convert()
+stage_underground_image = pygame.transform.scale(stage_underground_image, (screen_width, screen_height))
 table_image = pygame.image.load('table.png').convert_alpha()
 table_size = table_image.get_size()
 table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.4), int(table_size[1] * 0.4)))
@@ -203,7 +210,9 @@ moving_obstacles = {
     1: [],
     2: [
         MovingObstacle(start_pos=(829, 700), end_pos=(1487, 700), images_left=student_images_left, images_right=student_images_right),
-        MovingObstacle(start_pos=(17, 187), end_pos=(678, 187), images_left=student_images_left, images_right=student_images_right)
+        MovingObstacle(start_pos=(17, 187), end_pos=(678, 187), images_left=student_images_left, images_right=student_images_right),
+        MovingObstacle(start_pos=(663, 444), end_pos=(1420, 444), images_left=student_images_left, images_right=student_images_right),
+        MovingObstacle(start_pos=(20, 516), end_pos=(698, 516), images_left=student_images_left, images_right=student_images_right)
     ],
     3: []
 }
@@ -221,12 +230,12 @@ stage_obstacles = {
 table_coords = [
     (301, 156), (261, 679), (343, 700), (593, 451), (618, 750),
     (812, 700), (923, 241), (1175, 730), (1258, 449), (1400, 223),
-    (100, 300), (100, 300), (100, 500), (1000, 100), (1000, 500)
+    (100, 300), (100, 300), (100, 500), (1000, 100), (1000, 500), (31, 781)
 ]
 chair_coords = [
     (187, 750), (711, 226), (1006, 700), (1394, 730), (1349, 199),
     (1430, 643), (200, 100), (200, 300), (200, 500), (1100, 100),
-    (1100, 500)
+    (1100, 500), (118, 752), (215, 709)
 ]
 
 for pos in table_coords:
@@ -243,14 +252,48 @@ for pos in chair_coords:
 stage_backgrounds = {
     1: stage_1_background_image,
     2: stage_2_background_image, # A light blue for stage 2
-    3: stage_3_background_image
+    3: stage_3_background_image,
+    4: stage_4_background_image,
+    5: stage_1_background_image, # Placeholder
+    's-1': stage_underground_image
 }
+
+death_fall_image = pygame.image.load('death_fall.png').convert()
+death_fall_image = pygame.transform.scale(death_fall_image, (screen_width, screen_height))
+
+stage_3_game_over_zones = [
+    ((589, 0), (1217, 101), (1536, 101)),
+    ((0, 288), (322, 309), (1069, 441)),
+    ((1069, 441), (295, 542), (0, 542)),
+    ((1536, 747), (1106, 745), (503, 864))
+]
+
+stage_3_rect_fall_zones = [
+    pygame.Rect(1345, 225, 140, 184) # From (1345,225) to (1485,409)
+]
+
+def point_in_triangle(pt, v1, v2, v3):
+    """ Checks if a point pt is inside the triangle defined by v1, v2, and v3. """
+    def sign(p1, p2, p3):
+        return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1])
+
+    b1 = sign(pt, v1, v2) < 0.0
+    b2 = sign(pt, v2, v3) < 0.0
+    b3 = sign(pt, v3, v1) < 0.0
+
+    return ((b1 == b2) and (b2 == b3))
 
 # Define goals for each stage
 stage_goals = {
-    1: pygame.Rect(1118, 820, 315, 45), # Bottom-right for stage 1
-    2: pygame.Rect(0, 0, 314, 110),                         # Left edge for stage 2
-    3: pygame.Rect(0, 650, 10, 864)
+    1: [{'rect': pygame.Rect(1118, 820, 315, 45), 'dest': 2}], # Bottom-right for stage 1
+    2: [{'rect': pygame.Rect(0, 0, 314, 110), 'dest': 3}],     # Left edge for stage 2
+    3: [{'rect': pygame.Rect(0, 650, 10, 864), 'dest': 4}],
+    4: [
+        {'rect': pygame.Rect(1132, 0, 306, 23), 'dest': 5},
+        {'rect': pygame.Rect(1238, 761, 298, 103), 'dest': 's-1'}
+    ],
+    5: [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}], # Win condition
+    's-1': [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}] # Win condition
 }
 # 4. Main game loop
 while running:
@@ -332,49 +375,73 @@ while running:
         player_rect = player_image.get_rect(center=player_pos)
 
         
-        # Check for collision with obstacles
-        for obstacle in stage_obstacles.get(current_stage, []):
-            collision = False
-            if isinstance(obstacle, dict) and 'mask' in obstacle:
-                offset_x = obstacle['rect'].x - player_rect.x
-                offset_y = obstacle['rect'].y - player_rect.y
-                if player_mask.overlap(obstacle['mask'], (offset_x, offset_y)):
-                    collision = True
-                    if 'death_image_path' in obstacle:
-                        game_over_image = pygame.image.load(obstacle['death_image_path']).convert()
-                        game_over_image = pygame.transform.scale(game_over_image, (screen_width, screen_height))
-                    else:
-                        game_over_image = default_game_over_image
-            elif isinstance(obstacle, dict):
-                if player_rect.colliderect(obstacle['rect']):
-                    collision = True
-                    game_over_image = default_game_over_image
-            else:
-                if player_rect.colliderect(obstacle):
-                    collision = True
-                    game_over_image = default_game_over_image
+        # Check for collision with stage 3 game over zones
+        if current_stage == 3:
+            # Triangular zones
+            for tri in stage_3_game_over_zones:
+                if point_in_triangle(player_pos, tri[0], tri[1], tri[2]):
+                    game_over_image = death_fall_image
+                    game_state = 'game_over'
+                    break
             
-            if collision:
-                game_state = 'game_over'
-                break # Exit loop once a collision is found
+            # Rectangular fall zones, only check if not already game over
+            if game_state != 'game_over':
+                for rect in stage_3_rect_fall_zones:
+                    if player_rect.colliderect(rect):
+                        game_over_image = death_fall_image
+                        game_state = 'game_over'
+                        break
+        
+        # Check for collision with obstacles
+        if game_state != 'game_over':
+            for obstacle in stage_obstacles.get(current_stage, []):
+                collision = False
+                if isinstance(obstacle, dict) and 'mask' in obstacle:
+                    offset_x = obstacle['rect'].x - player_rect.x
+                    offset_y = obstacle['rect'].y - player_rect.y
+                    if player_mask.overlap(obstacle['mask'], (offset_x, offset_y)):
+                        collision = True
+                        if 'death_image_path' in obstacle:
+                            game_over_image = pygame.image.load(obstacle['death_image_path']).convert()
+                            game_over_image = pygame.transform.scale(game_over_image, (screen_width, screen_height))
+                        else:
+                            game_over_image = default_game_over_image
+                elif isinstance(obstacle, dict):
+                    if player_rect.colliderect(obstacle['rect']):
+                        collision = True
+                        game_over_image = default_game_over_image
+                else:
+                    if player_rect.colliderect(obstacle):
+                        collision = True
+                        game_over_image = default_game_over_image
+                
+                if collision:
+                    game_state = 'game_over'
+                    break # Exit loop once a collision is found
 
-        for obstacle in moving_obstacles.get(current_stage, []):
-            offset_x = obstacle.rect.x - player_rect.x
-            offset_y = obstacle.rect.y - player_rect.y
-            if player_mask.overlap(obstacle.mask, (offset_x, offset_y)):
-                game_over_image = default_game_over_image # Or a specific one for students
-                game_state = 'game_over'
-                break
+        if game_state != 'game_over':
+            for obstacle in moving_obstacles.get(current_stage, []):
+                offset_x = obstacle.rect.x - player_rect.x
+                offset_y = obstacle.rect.y - player_rect.y
+                if player_mask.overlap(obstacle.mask, (offset_x, offset_y)):
+                    game_over_image = default_game_over_image # Or a specific one for students
+                    game_state = 'game_over'
+                    break
 
         # Get the goal for the current stage
-        current_goal_rect = stage_goals.get(current_stage)
+        current_goals = stage_goals.get(current_stage, [])
         # Check if the player touches the goal area
-        if current_goal_rect and player_rect.colliderect(current_goal_rect):
-            if current_stage < len(stage_backgrounds):
-                current_stage += 1
-            else:
-                final_time = pygame.time.get_ticks() - start_time # Record final time
-                game_state = 'fade_out' # Start the fade effect
+        for goal in current_goals:
+            if player_rect.colliderect(goal['rect']):
+                destination = goal['dest']
+                # Check if the destination stage exists in our backgrounds dictionary
+                if destination in stage_backgrounds:
+                    current_stage = destination
+                else:
+                    # If destination doesn't exist, it's a win condition
+                    final_time = pygame.time.get_ticks() - start_time
+                    game_state = 'fade_out'
+                break # Goal was reached, no need to check others
 
 
 
