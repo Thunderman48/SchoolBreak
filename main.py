@@ -42,6 +42,10 @@ cutscene_timer = 0
 cutscene_fade_alpha = 255
 
 
+cut_after_image = pygame.image.load('cut_after.png').convert()
+cut_after_image = pygame.transform.scale(cut_after_image, (screen_width, screen_height))
+cut_after_rect = pygame.Rect(17, 13, 77, 77)
+
 # --- Menu Assets ---
 title_font = pygame.font.Font(None, 120)
 button_font = pygame.font.Font(None, 80)
@@ -81,6 +85,8 @@ quit_rect = pygame.Rect(44, 296, 135, 81)
 credits_content_text = title_font.render("Made by NEXTLAB", True, WHITE)
 credits_content_rect = credits_content_text.get_rect(center=(screen_width / 2, screen_height / 2))
 
+game_over_image = pygame.image.load('death_hit.png').convert()
+game_over_image = pygame.transform.scale(game_over_image, (screen_width, screen_height))
 game_over_text = title_font.render("GAME OVER", True, BLACK)
 game_over_rect = game_over_text.get_rect(center=(screen_width / 2, screen_height / 2))
 
@@ -116,16 +122,16 @@ stage_2_background_image = pygame.image.load('stage_2_bakcground.png').convert()
 stage_2_background_image = pygame.transform.scale(stage_2_background_image, (screen_width, screen_height))
 table_image = pygame.image.load('table.png').convert_alpha()
 table_size = table_image.get_size()
-table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.5), int(table_size[1] * 0.5)))
+table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.4), int(table_size[1] * 0.4)))
 chair_image = pygame.image.load('chair.png').convert_alpha()
 chair_size = chair_image.get_size()
-chair_image = pygame.transform.scale(chair_image, (int(chair_size[0] * 0.5), int(chair_size[1] * 0.5)))
+chair_image = pygame.transform.scale(chair_image, (int(chair_size[0] * 0.4), int(chair_size[1] * 0.4)))
 table_mask = pygame.mask.from_surface(table_image)
 chair_mask = pygame.mask.from_surface(chair_image)
 
 stage_obstacles = {
     1: [],
-    2: [],
+    2: [pygame.Rect(800, 10, 522, 275)],
     3: []
 }
 
@@ -178,10 +184,17 @@ while running:
                 if start_rect.collidepoint(event.pos):
                     game_state = 'cutscene' # Start the cutscene
                     cutscene_index = 0
+                    cutscene_state = 'fading_in'
+                    cutscene_fade_alpha = 255
+                    cutscene_timer = 0
                 elif credits_rect.collidepoint(event.pos):
                     game_state = 'credits' # Go to credits
                 elif quit_rect.collidepoint(event.pos):
                     running = False # Quit the game
+            elif game_state == 'cut_after':
+                if cut_after_rect.collidepoint(event.pos):
+                    game_state = 'game'
+                    start_time = pygame.time.get_ticks()
             elif game_state == 'credits':
                 game_state = 'start_menu' # Click anywhere to go back
             elif game_state == 'cutscene':
@@ -282,8 +295,7 @@ while running:
                 cutscene_fade_alpha = 255
                 cutscene_index += 1
                 if cutscene_index >= len(cutscenes):
-                    game_state = 'game'
-                    start_time = pygame.time.get_ticks()
+                    game_state = 'cut_after' # Transition to the new cut_after screen
                 else:
                     cutscene_state = 'fading_in'
 
@@ -299,6 +311,10 @@ while running:
         screen.blit(fade_surface, (0, 0))
 
 
+    elif game_state == 'cut_after':
+        pygame.mouse.set_visible(True)
+        screen.blit(cut_after_image, (0, 0))
+
     elif game_state == 'credits':
         pygame.mouse.set_visible(True)
         screen.fill(BLACK)
@@ -306,8 +322,7 @@ while running:
 
     elif game_state == 'game_over':
         pygame.mouse.set_visible(True)
-        screen.fill(RED)
-        screen.blit(game_over_text, game_over_rect)
+        screen.blit(game_over_image, (0, 0))
 
     elif game_state == 'fade_out':
         # Draw the last game frame
@@ -321,11 +336,12 @@ while running:
             pygame.draw.rect(screen, GREEN, current_goal_rect)
         
         # Draw the obstacles
-        for obstacle in stage_obstacles.get(current_stage, []):
-            if isinstance(obstacle, dict):
-                screen.blit(obstacle['image'], obstacle['rect'])
-            else:
-                pygame.draw.rect(screen, BLACK, obstacle)
+        if current_stage != 2:
+            for obstacle in stage_obstacles.get(current_stage, []):
+                if isinstance(obstacle, dict):
+                    screen.blit(obstacle['image'], obstacle['rect'])
+                else:
+                    pygame.draw.rect(screen, BLACK, obstacle)
         
         screen.blit(player_image, player_rect)
 
@@ -395,11 +411,12 @@ while running:
             pygame.draw.rect(screen, GREEN, current_goal_rect)
 
         # Draw the obstacles
-        for obstacle in stage_obstacles.get(current_stage, []):
-            if isinstance(obstacle, dict):
-                screen.blit(obstacle['image'], obstacle['rect'])
-            else:
-                pygame.draw.rect(screen, BLACK, obstacle)
+        if current_stage != 2:
+            for obstacle in stage_obstacles.get(current_stage, []):
+                if isinstance(obstacle, dict):
+                    screen.blit(obstacle['image'], obstacle['rect'])
+                else:
+                    pygame.draw.rect(screen, BLACK, obstacle)
 
         # Draw the timer
         elapsed_time = pygame.time.get_ticks() - start_time
