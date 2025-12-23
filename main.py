@@ -24,6 +24,8 @@ start_time = 0
 final_time = 0
 time_screen_start = 0
 
+stage_6_hatch_triggered = False
+
 # Define colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -111,12 +113,169 @@ class MovingObstacle:
             self.animation_frame = (self.animation_frame + 1) % 2
             if self.moving_right:
                 self.image = self.images_right[self.animation_frame]
-            else:
-                self.image = self.images_left[self.animation_frame]
             self.mask = pygame.mask.from_surface(self.image)
     
     def draw(self, surface):
         surface.blit(self.image, self.rect)
+
+    def reset(self):
+        self.rect.topleft = self.start_pos
+        self.moving_right = True
+        self.animation_frame = 0
+        self.image = self.images_right[0]
+        self.mask = pygame.mask.from_surface(self.image)
+
+class TriggeredStudent:
+    def __init__(self, start_pos, end_pos, images):
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.images = images
+        self.initial_pos = pygame.Vector2(start_pos)
+        self.target_pos = pygame.Vector2(end_pos)
+        self.current_pos = pygame.Vector2(start_pos)
+        self.rect = self.images[0].get_rect(topleft=self.current_pos)
+        self.speed = 5 
+        self.state = 'idle' # idle, moving, stopped
+        self.animation_frame = 0
+        self.animation_speed = 15
+        self.animation_timer = 0
+        self.image = self.images[0]
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def trigger(self):
+        if self.state == 'idle':
+            self.state = 'moving'
+
+    def update(self):
+        # Movement
+        if self.state == 'moving':
+            direction = self.target_pos - self.current_pos
+            if direction.length() > self.speed:
+                direction.scale_to_length(self.speed)
+                self.current_pos += direction
+                self.rect.topleft = self.current_pos
+            else:
+                self.current_pos = self.target_pos
+                self.rect.topleft = self.current_pos
+                self.state = 'stopped'
+
+        # Animation
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.animation_frame = (self.animation_frame + 1) % 2
+            self.image = self.images[self.animation_frame]
+            self.mask = pygame.mask.from_surface(self.image)
+    
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
+        
+    def reset(self):
+        self.state = 'idle'
+        self.current_pos = pygame.Vector2(self.start_pos)
+        self.rect.topleft = self.current_pos
+
+class ChasingTeacher:
+    def __init__(self, start_pos, images_left, images_right):
+        self.start_pos = start_pos
+        self.images_left = images_left
+        self.images_right = images_right
+        self.current_pos = pygame.Vector2(start_pos)
+        self.rect = self.images_left[0].get_rect(topleft=self.current_pos)
+        self.speed = 2
+        self.state = 'chasing'  # chasing, stopped
+        self.animation_frame = 0
+        self.animation_speed = 15
+        self.animation_timer = 0
+        self.images = self.images_right
+        self.image = self.images[0]
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self, player_pos, trash_obstacles):
+        # Movement
+        if self.state == 'chasing':
+            direction = pygame.Vector2(player_pos) - self.current_pos
+            if direction.length() > 0:
+                if direction.x < 0:
+                    self.images = self.images_left
+                else:
+                    self.images = self.images_right
+
+            if direction.length() > self.speed:
+                direction.scale_to_length(self.speed)
+                self.current_pos += direction
+                self.rect.topleft = self.current_pos
+
+            # Collision with Trash
+            for trash in trash_obstacles:
+                # Create a smaller collision box for the trash, centered
+                shrunken_width = trash['rect'].width * 0.5
+                shrunken_height = trash['rect'].height * 0.5
+                shrunken_rect = pygame.Rect(0, 0, shrunken_width, shrunken_height)
+                shrunken_rect.center = trash['rect'].center
+                if self.rect.colliderect(shrunken_rect):
+                    self.state = 'stopped'
+                    break
+
+        # Animation
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.animation_frame = (self.animation_frame + 1) % 2
+            self.image = self.images[self.animation_frame]
+            self.mask = pygame.mask.from_surface(self.image)
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
+
+    def reset(self):
+        self.state = 'chasing'
+        self.current_pos = pygame.Vector2(self.start_pos)
+        self.rect.topleft = self.current_pos
+
+class SpiderBot:
+    def __init__(self, start_pos, images_h, images_v):
+        self.start_pos = start_pos
+        self.images_h = images_h
+        self.images_v = images_v
+        self.current_pos = pygame.Vector2(start_pos)
+        self.rect = self.images_h[0].get_rect(topleft=self.current_pos)
+        self.speed = 1.5
+        self.animation_frame = 0
+        self.animation_speed = 15
+        self.animation_timer = 0
+        self.images = self.images_h
+        self.image = self.images[0]
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self, player_pos):
+        # Movement
+        direction = pygame.Vector2(player_pos) - self.current_pos
+        if direction.length() > 0:
+            # Animation Logic
+            if abs(direction.x) > abs(direction.y):
+                self.images = self.images_h
+            else:
+                self.images = self.images_v
+            
+            direction.scale_to_length(self.speed)
+            self.current_pos += direction
+            self.rect.topleft = self.current_pos
+
+        # Animation
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.animation_frame = (self.animation_frame + 1) % 2
+            self.image = self.images[self.animation_frame]
+            self.mask = pygame.mask.from_surface(self.image)
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
+
+    def reset(self):
+        self.current_pos = pygame.Vector2(self.start_pos)
+        self.rect.topleft = self.current_pos
 
 # Button positioning
 start_rect = pygame.Rect(30, 94, 146, 84)
@@ -174,6 +333,10 @@ stage_3_background_image = pygame.image.load('stage_3_background.png').convert()
 stage_3_background_image = pygame.transform.scale(stage_3_background_image, (screen_width, screen_height))
 stage_4_background_image = pygame.image.load('stage_4.jpg').convert()
 stage_4_background_image = pygame.transform.scale(stage_4_background_image, (screen_width, screen_height))
+stage_5_background_image = pygame.image.load('stage_5.png').convert()
+stage_5_background_image = pygame.transform.scale(stage_5_background_image, (screen_width, screen_height))
+stage_6_background_image = pygame.image.load('stage_6.png').convert()
+stage_6_background_image = pygame.transform.scale(stage_6_background_image, (screen_width, screen_height))
 stage_underground_image = pygame.image.load('stage_underground.png').convert()
 stage_underground_image = pygame.transform.scale(stage_underground_image, (screen_width, screen_height))
 table_image = pygame.image.load('table.png').convert_alpha()
@@ -191,11 +354,25 @@ puddle_image = pygame.image.load('puddle.png').convert_alpha()
 puddle_image = pygame.transform.scale(puddle_image, obstacle_size)
 death_slip_image = pygame.image.load('death_slip.png').convert()
 death_slip_image = pygame.transform.scale(death_slip_image, (screen_width, screen_height))
+hatch_open_image = pygame.image.load('hatch_open.png').convert_alpha()
+hatch_open_image = pygame.transform.scale(hatch_open_image, (290, 292))
 table_mask = pygame.mask.from_surface(table_image)
 chair_mask = pygame.mask.from_surface(chair_image)
 trash_1_mask = pygame.mask.from_surface(trash_1_image)
 trash_2_mask = pygame.mask.from_surface(trash_2_image)
 puddle_mask = pygame.mask.from_surface(puddle_image)
+
+death_lasershot_image = pygame.image.load('death_lasershot.png').convert()
+death_lasershot_image = pygame.transform.scale(death_lasershot_image, (screen_width, screen_height))
+
+spider_h_images = [
+    pygame.transform.scale(pygame.image.load('spider_1.png').convert_alpha(), (300, 300)),
+    pygame.transform.scale(pygame.image.load('spider_2.png').convert_alpha(), (300, 300))
+]
+spider_v_images = [
+    pygame.transform.scale(pygame.image.load('spider3.png').convert_alpha(), (300, 300)),
+    pygame.transform.scale(pygame.image.load('spider_4.png').convert_alpha(), (300, 300))
+]
 
 student_images_left = [
     pygame.transform.scale(pygame.image.load('student_1.png').convert_alpha(), (100, 140)),
@@ -204,6 +381,23 @@ student_images_left = [
 student_images_right = [
     pygame.transform.scale(pygame.image.load('student_3.png').convert_alpha(), (100, 140)),
     pygame.transform.scale(pygame.image.load('student_4.png').convert_alpha(), (100, 140))
+]
+
+teacher_f_left = [
+    pygame.transform.scale(pygame.image.load('teacher_f_1.png').convert_alpha(), (100, 140)),
+    pygame.transform.scale(pygame.image.load('teacher_f_2.png').convert_alpha(), (100, 140))
+]
+teacher_f_right = [
+    pygame.transform.scale(pygame.image.load('teacher_f_3.png').convert_alpha(), (100, 140)),
+    pygame.transform.scale(pygame.image.load('teacher_f_4.png').convert_alpha(), (100, 140))
+]
+teacher_m_left = [
+    pygame.transform.scale(pygame.image.load('teacher_m_1.png').convert_alpha(), (100, 140)),
+    pygame.transform.scale(pygame.image.load('teacher_m_2.png').convert_alpha(), (100, 140))
+]
+teacher_m_right = [
+    pygame.transform.scale(pygame.image.load('teacher_m_3.png').convert_alpha(), (100, 140)),
+    pygame.transform.scale(pygame.image.load('teacher_m_4.png').convert_alpha(), (100, 140))
 ]
 
 moving_obstacles = {
@@ -217,6 +411,22 @@ moving_obstacles = {
     3: []
 }
 
+special_obstacles = {
+    3: [
+        TriggeredStudent(start_pos=(301, 669), end_pos=(1480, 456), images=student_images_right)
+    ],
+    4: [
+        ChasingTeacher(start_pos=(155, 328), images_left=teacher_f_left, images_right=teacher_f_right),
+        ChasingTeacher(start_pos=(865, 117), images_left=teacher_m_left, images_right=teacher_m_right),
+        ChasingTeacher(start_pos=(1200, 746), images_left=teacher_f_left, images_right=teacher_f_right)
+    ],
+    5: [
+        SpiderBot(start_pos=(800, 400), images_h=spider_h_images, images_v=spider_v_images),
+        SpiderBot(start_pos=(249, 218), images_h=spider_h_images, images_v=spider_v_images),
+        SpiderBot(start_pos=(1248, 691), images_h=spider_h_images, images_v=spider_v_images)
+    ]
+}
+
 stage_obstacles = {
     1: [],
     2: [
@@ -224,7 +434,12 @@ stage_obstacles = {
         {'image': trash_2_image, 'rect': trash_2_image.get_rect(topleft=(820,656)), 'mask': trash_2_mask, 'death_image_path': 'death_slip.png'},
         {'image': puddle_image, 'rect': puddle_image.get_rect(topleft=(319,466)), 'mask': puddle_mask, 'death_image_path': 'death_slip.png'}
     ],
-    3: []
+    3: [],
+    4: [
+        {'image': puddle_image, 'rect': puddle_image.get_rect(topleft=(1040,682)), 'mask': puddle_mask, 'death_image_path': 'death_slip.png'},
+        {'image': trash_1_image, 'rect': trash_1_image.get_rect(topleft=(335,389)), 'mask': trash_1_mask, 'death_image_path': 'death_slip.png'},
+        {'image': trash_2_image, 'rect': trash_2_image.get_rect(topleft=(971,361)), 'mask': trash_2_mask, 'death_image_path': 'death_slip.png'}
+    ]
 }
 
 table_coords = [
@@ -254,7 +469,8 @@ stage_backgrounds = {
     2: stage_2_background_image, # A light blue for stage 2
     3: stage_3_background_image,
     4: stage_4_background_image,
-    5: stage_1_background_image, # Placeholder
+    5: stage_5_background_image,
+    6: stage_6_background_image,
     's-1': stage_underground_image
 }
 
@@ -292,7 +508,8 @@ stage_goals = {
         {'rect': pygame.Rect(1132, 0, 306, 23), 'dest': 5},
         {'rect': pygame.Rect(1238, 761, 298, 103), 'dest': 's-1'}
     ],
-    5: [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}], # Win condition
+    5: [{'rect': pygame.Rect(307, 0, 235, 46), 'dest': 6}],
+    6: [{'rect': pygame.Rect(-10, 12, 290, 292), 'dest': 99}], # Win condition
     's-1': [{'rect': pygame.Rect(0, 0, 10, 10), 'dest': 99}] # Win condition
 }
 # 4. Main game loop
@@ -331,8 +548,14 @@ while running:
                     cutscene_timer = 0
             elif game_state == 'game_over':
                 # Click to go back to the main menu
+                for obstacle in special_obstacles.get(current_stage, []):
+                    obstacle.reset()
+                for stage_key in moving_obstacles:
+                    for obstacle in moving_obstacles[stage_key]:
+                        obstacle.reset()
                 game_state = 'start_menu'
                 current_stage = 1 # Reset stage
+                stage_6_hatch_triggered = False
 
             elif game_state == 'show_time':
                 # Click to proceed to credits
@@ -352,6 +575,23 @@ while running:
         for obstacle in moving_obstacles.get(current_stage, []):
             obstacle.update()
 
+        for obstacle in special_obstacles.get(current_stage, []):
+            if isinstance(obstacle, ChasingTeacher):
+                trash_obstacles = stage_obstacles.get(current_stage, [])
+                obstacle.update(player_pos, trash_obstacles)
+            elif isinstance(obstacle, SpiderBot):
+                obstacle.update(player_pos)
+            else:
+                obstacle.update()
+
+        # Stage 3 specific logic
+        if current_stage == 3:
+            trigger_rect = pygame.Rect(1092, 486, 89, 200)
+            if player_rect.colliderect(trigger_rect):
+                for obstacle in special_obstacles.get(current_stage, []):
+                    if isinstance(obstacle, TriggeredStudent):
+                        obstacle.trigger()
+        
         player_animation_timer += 1
         if player_animation_timer >= player_animation_speed:
             player_animation_timer = 0
@@ -373,6 +613,12 @@ while running:
 
         # Create a rect for the player for collision detection, centered on the mouse
         player_rect = player_image.get_rect(center=player_pos)
+
+        # Stage 6 specific logic
+        if current_stage == 6:
+            trigger_rect = pygame.Rect(1114, 769, 67, 113)
+            if player_rect.colliderect(trigger_rect):
+                stage_6_hatch_triggered = True
 
         
         # Check for collision with stage 3 game over zones
@@ -427,21 +673,38 @@ while running:
                     game_over_image = default_game_over_image # Or a specific one for students
                     game_state = 'game_over'
                     break
+        
+        if game_state != 'game_over':
+            for obstacle in special_obstacles.get(current_stage, []):
+                offset_x = obstacle.rect.x - player_rect.x
+                offset_y = obstacle.rect.y - player_rect.y
+                if player_mask.overlap(obstacle.mask, (offset_x, offset_y)):
+                    if isinstance(obstacle, SpiderBot):
+                        game_over_image = death_lasershot_image
+                    else:
+                        game_over_image = default_game_over_image
+                    game_state = 'game_over'
+                    break
 
         # Get the goal for the current stage
         current_goals = stage_goals.get(current_stage, [])
         # Check if the player touches the goal area
-        for goal in current_goals:
-            if player_rect.colliderect(goal['rect']):
-                destination = goal['dest']
-                # Check if the destination stage exists in our backgrounds dictionary
-                if destination in stage_backgrounds:
-                    current_stage = destination
-                else:
-                    # If destination doesn't exist, it's a win condition
-                    final_time = pygame.time.get_ticks() - start_time
-                    game_state = 'fade_out'
-                break # Goal was reached, no need to check others
+        if current_stage == 6 and not stage_6_hatch_triggered:
+            pass # Don't check for goal on stage 6 if hatch isn't open
+        else:
+            for goal in current_goals:
+                if player_rect.colliderect(goal['rect']):
+                    destination = goal['dest']
+                    # Check if the destination stage exists in our backgrounds dictionary
+                    if destination in stage_backgrounds:
+                        current_stage = destination
+                        if destination == 6: # Reset hatch when entering stage 6
+                            stage_6_hatch_triggered = False
+                    else:
+                        # If destination doesn't exist, it's a win condition
+                        final_time = pygame.time.get_ticks() - start_time
+                        game_state = 'fade_out'
+                    break # Goal was reached, no need to check others
 
 
 
@@ -599,6 +862,12 @@ while running:
 
         for obstacle in moving_obstacles.get(current_stage, []):
             obstacle.draw(screen)
+
+        for obstacle in special_obstacles.get(current_stage, []):
+            obstacle.draw(screen)
+
+        if current_stage == 6 and stage_6_hatch_triggered:
+            screen.blit(hatch_open_image, (-10, 12))
 
         # Draw the timer
         elapsed_time = pygame.time.get_ticks() - start_time
