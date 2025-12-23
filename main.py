@@ -85,8 +85,9 @@ quit_rect = pygame.Rect(44, 296, 135, 81)
 credits_content_text = title_font.render("Made by NEXTLAB", True, WHITE)
 credits_content_rect = credits_content_text.get_rect(center=(screen_width / 2, screen_height / 2))
 
-game_over_image = pygame.image.load('death_hit.png').convert()
-game_over_image = pygame.transform.scale(game_over_image, (screen_width, screen_height))
+default_game_over_image = pygame.image.load('death_hit.png').convert()
+default_game_over_image = pygame.transform.scale(default_game_over_image, (screen_width, screen_height))
+game_over_image = default_game_over_image # Set initial game over image
 game_over_text = title_font.render("GAME OVER", True, BLACK)
 game_over_rect = game_over_text.get_rect(center=(screen_width / 2, screen_height / 2))
 
@@ -126,12 +127,28 @@ table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.4), int
 chair_image = pygame.image.load('chair.png').convert_alpha()
 chair_size = chair_image.get_size()
 chair_image = pygame.transform.scale(chair_image, (int(chair_size[0] * 0.4), int(chair_size[1] * 0.4)))
+obstacle_size = (80, 80)
+trash_1_image = pygame.image.load('trash_1.png').convert_alpha()
+trash_1_image = pygame.transform.scale(trash_1_image, obstacle_size)
+trash_2_image = pygame.image.load('trash_2.png').convert_alpha()
+trash_2_image = pygame.transform.scale(trash_2_image, obstacle_size)
+puddle_image = pygame.image.load('puddle.png').convert_alpha()
+puddle_image = pygame.transform.scale(puddle_image, obstacle_size)
+death_slip_image = pygame.image.load('death_slip.png').convert()
+death_slip_image = pygame.transform.scale(death_slip_image, (screen_width, screen_height))
 table_mask = pygame.mask.from_surface(table_image)
 chair_mask = pygame.mask.from_surface(chair_image)
+trash_1_mask = pygame.mask.from_surface(trash_1_image)
+trash_2_mask = pygame.mask.from_surface(trash_2_image)
+puddle_mask = pygame.mask.from_surface(puddle_image)
 
 stage_obstacles = {
     1: [],
-    2: [pygame.Rect(800, 10, 522, 275)],
+    2: [
+        {'image': trash_1_image, 'rect': trash_1_image.get_rect(topleft=(1311,430)), 'mask': trash_1_mask, 'death_image': death_slip_image},
+        {'image': trash_2_image, 'rect': trash_2_image.get_rect(topleft=(820,656)), 'mask': trash_2_mask, 'death_image': death_slip_image},
+        {'image': puddle_image, 'rect': puddle_image.get_rect(topleft=(319,466)), 'mask': puddle_mask, 'death_image': death_slip_image}
+    ],
     3: []
 }
 
@@ -242,17 +259,28 @@ while running:
 
         # Check for collision with obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
+            collision = False
             if isinstance(obstacle, dict) and 'mask' in obstacle:
                 offset_x = obstacle['rect'].x - player_rect.x
                 offset_y = obstacle['rect'].y - player_rect.y
                 if player_mask.overlap(obstacle['mask'], (offset_x, offset_y)):
-                    game_state = 'game_over'
+                    collision = True
+                    if 'death_image' in obstacle:
+                        game_over_image = obstacle['death_image']
+                    else:
+                        game_over_image = default_game_over_image
             elif isinstance(obstacle, dict):
                 if player_rect.colliderect(obstacle['rect']):
-                    game_state = 'game_over'
+                    collision = True
+                    game_over_image = default_game_over_image
             else:
                 if player_rect.colliderect(obstacle):
-                    game_state = 'game_over'
+                    collision = True
+                    game_over_image = default_game_over_image
+            
+            if collision:
+                game_state = 'game_over'
+                break # Exit loop once a collision is found
         # Get the goal for the current stage
         current_goal_rect = stage_goals.get(current_stage)
         # Check if the player touches the goal area
@@ -336,12 +364,11 @@ while running:
             pygame.draw.rect(screen, GREEN, current_goal_rect)
         
         # Draw the obstacles
-        if current_stage != 2:
-            for obstacle in stage_obstacles.get(current_stage, []):
-                if isinstance(obstacle, dict):
-                    screen.blit(obstacle['image'], obstacle['rect'])
-                else:
-                    pygame.draw.rect(screen, BLACK, obstacle)
+        for obstacle in stage_obstacles.get(current_stage, []):
+            if isinstance(obstacle, dict):
+                screen.blit(obstacle['image'], obstacle['rect'])
+            else:
+                pygame.draw.rect(screen, BLACK, obstacle)
         
         screen.blit(player_image, player_rect)
 
@@ -411,12 +438,11 @@ while running:
             pygame.draw.rect(screen, GREEN, current_goal_rect)
 
         # Draw the obstacles
-        if current_stage != 2:
-            for obstacle in stage_obstacles.get(current_stage, []):
-                if isinstance(obstacle, dict):
-                    screen.blit(obstacle['image'], obstacle['rect'])
-                else:
-                    pygame.draw.rect(screen, BLACK, obstacle)
+        for obstacle in stage_obstacles.get(current_stage, []):
+            if isinstance(obstacle, dict):
+                screen.blit(obstacle['image'], obstacle['rect'])
+            else:
+                pygame.draw.rect(screen, BLACK, obstacle)
 
         # Draw the timer
         elapsed_time = pygame.time.get_ticks() - start_time
