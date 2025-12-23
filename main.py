@@ -40,11 +40,20 @@ title_image = pygame.image.load('title_screen.png').convert()
 title_image = pygame.transform.scale(title_image, (screen_width, screen_height))
 title_rect = title_image.get_rect(topleft=(0, 0))
 
-player_images = [
+last_mouse_x = 0
+player_images_right = [
     pygame.image.load('player_1.png').convert_alpha(),
     pygame.image.load('player_2.png').convert_alpha()
 ]
-player_images = [pygame.transform.scale(img, (50, 70)) for img in player_images]
+player_images_left = [
+    pygame.image.load('player_3.png').convert_alpha(),
+    pygame.image.load('player_4.png').convert_alpha()
+]
+player_images = player_images_right # Start by facing right
+
+player_images_right = [pygame.transform.scale(img, (100, 140)) for img in player_images_right]
+player_images_left = [pygame.transform.scale(img, (100, 140)) for img in player_images_left]
+player_images = [pygame.transform.scale(img, (100, 140)) for img in player_images]
 player_frame = 0
 player_animation_speed = 10  # Change image every 10 frames
 player_animation_timer = 0
@@ -92,8 +101,14 @@ credit_renders = []
 # --- Stage 1 Assets ---
 stage_1_background_image = pygame.image.load('stage_1_background.png').convert()
 stage_1_background_image = pygame.transform.scale(stage_1_background_image, (screen_width, screen_height))
-table_image = pygame.image.load('tem_table.png').convert_alpha()
-chair_image = pygame.image.load('tem_chair.png').convert_alpha()
+stage_2_background_image = pygame.image.load('stage_2_bakcground.png').convert()
+stage_2_background_image = pygame.transform.scale(stage_2_background_image, (screen_width, screen_height))
+table_image = pygame.image.load('table.png').convert_alpha()
+table_size = table_image.get_size()
+table_image = pygame.transform.scale(table_image, (int(table_size[0] * 0.5), int(table_size[1] * 0.5)))
+chair_image = pygame.image.load('chair.png').convert_alpha()
+chair_size = chair_image.get_size()
+chair_image = pygame.transform.scale(chair_image, (int(chair_size[0] * 0.5), int(chair_size[1] * 0.5)))
 table_mask = pygame.mask.from_surface(table_image)
 chair_mask = pygame.mask.from_surface(chair_image)
 
@@ -125,14 +140,14 @@ for pos in chair_coords:
 # Stage-specific settings
 stage_backgrounds = {
     1: stage_1_background_image,
-    2: (200, 200, 255), # A light blue for stage 2
+    2: stage_2_background_image, # A light blue for stage 2
     3: (200, 255, 200), # A light green for stage 3
 }
 
 # Define goals for each stage
 stage_goals = {
     1: pygame.Rect(1118, 820, 315, 45), # Bottom-right for stage 1
-    2: pygame.Rect(0, 0, 50, screen_height),                         # Left edge for stage 2
+    2: pygame.Rect(0, 0, 314, 110),                         # Left edge for stage 2
     3: pygame.Rect(20, 80, screen_width // 3, 40)                     # Top-left for stage 3, a bit wider
 }
 # 4. Main game loop
@@ -187,6 +202,12 @@ while running:
             player_mask = pygame.mask.from_surface(player_image)
         # Get mouse position to use as the character's position
         player_pos = pygame.mouse.get_pos()
+        current_mouse_x = player_pos[0]
+        if current_mouse_x < last_mouse_x:
+            player_images = player_images_left
+        elif current_mouse_x > last_mouse_x:
+            player_images = player_images_right
+        last_mouse_x = current_mouse_x
 
         # Create a rect for the player for collision detection, centered on the mouse
         player_rect = player_image.get_rect(center=player_pos)
@@ -243,7 +264,8 @@ while running:
         else:
             screen.fill(background)
         current_goal_rect = stage_goals.get(current_stage)
-        pygame.draw.rect(screen, GREEN, current_goal_rect)
+        if current_stage != 1:
+            pygame.draw.rect(screen, GREEN, current_goal_rect)
         
         # Draw the obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
@@ -316,7 +338,8 @@ while running:
 
         # Draw the goal area for the current stage
         current_goal_rect = stage_goals.get(current_stage)
-        pygame.draw.rect(screen, GREEN, current_goal_rect)
+        if current_stage !=1:
+            pygame.draw.rect(screen, GREEN, current_goal_rect)
 
         # Draw the obstacles
         for obstacle in stage_obstacles.get(current_stage, []):
