@@ -17,6 +17,7 @@ pygame.display.set_caption("SchoolBreak")
 running = True
 clock = pygame.time.Clock()
 current_stage = 1
+last_checkpoint_stage = 1
 game_state = 'start_menu' # New game state manager
 fade_alpha = 0 # For fade effect
 fade_surface = pygame.Surface((screen_width, screen_height))
@@ -367,6 +368,8 @@ death_slip_image = pygame.transform.scale(death_slip_image, (screen_width, scree
 hatch_open_image = pygame.image.load('hatch_open.png').convert_alpha()
 hatch_open_image = pygame.transform.scale(hatch_open_image, (290, 292))
 
+
+
 # --- Stage 6 Assets ---
 big_laser_image = pygame.image.load('big_laser.png').convert_alpha()
 laser_zones = [
@@ -531,8 +534,7 @@ stage_goals = {
     2: [{'rect': pygame.Rect(0, 0, 314, 110), 'dest': 3}],     # Left edge for stage 2
     3: [{'rect': pygame.Rect(0, 650, 10, 864), 'dest': 4}],
     4: [
-        {'rect': pygame.Rect(1132, 0, 306, 23), 'dest': 5},
-        {'rect': pygame.Rect(1238, 761, 298, 103), 'dest': 's-1'}
+        {'rect': pygame.Rect(1132, 0, 306, 23), 'dest': 5}
     ],
     5: [{'rect': pygame.Rect(307, 0, 235, 46), 'dest': 6}],
     6: [{'rect': pygame.Rect(-10, 12, 290, 292), 'dest': 99}], # Win condition
@@ -580,19 +582,31 @@ while running:
                     cutscene_state = 'fading_out'
                     cutscene_timer = 0
             elif game_state == 'game_over':
-                # Click to go back to the main menu
+                # Click to retry from the last checkpoint
                 for stage_key in special_obstacles:
                     for obstacle in special_obstacles[stage_key]:
                         obstacle.reset()
                 for stage_key in moving_obstacles:
                     for obstacle in moving_obstacles[stage_key]:
                         obstacle.reset()
+
+                # Reset any stage-specific visual changes
                 stage_backgrounds[5] = stage_5_background_image
-                laser_index = 0
-                laser_state = 'idle'
-                game_state = 'start_menu'
-                current_stage = 1 # Reset stage
                 stage_6_hatch_triggered = False
+
+                # Set current_stage to the checkpoint
+                current_stage = last_checkpoint_stage
+
+                # Reset state for the restarted stage
+                if current_stage == 6:
+                    laser_state = 'first_cooldown'
+                    laser_index = 0
+                    laser_timer = pygame.time.get_ticks()
+                else:
+                    laser_state = 'idle'
+                    laser_index = 0
+
+                game_state = 'game' # Go back to the game
 
             elif game_state == 'show_time':
                 # Click to proceed to credits
@@ -660,7 +674,7 @@ while running:
             # Laser logic
             if laser_index < len(laser_zones):
                 now = pygame.time.get_ticks()
-                if laser_state == 'first_cooldown' and now - laser_timer > 700:
+                if laser_state == 'first_cooldown' and now - laser_timer > 1500:
                     laser_state = 'firing'
                     laser_timer = now
                 elif laser_state == 'cooldown' and now - laser_timer > 700:
@@ -758,6 +772,7 @@ while running:
                     # Check if the destination stage exists in our backgrounds dictionary
                     if destination in stage_backgrounds:
                         current_stage = destination
+                        last_checkpoint_stage = destination
                         if destination == 6: # Reset hatch when entering stage 6
                             stage_6_hatch_triggered = False
                             laser_state = 'first_cooldown' # Start the laser sequence
