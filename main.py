@@ -513,9 +513,7 @@ stage_3_game_over_zones = [
     ((1536, 747), (1106, 745), (503, 864))
 ]
 
-stage_3_rect_fall_zones = [
-    pygame.Rect(1345, 225, 140, 184) # From (1345,225) to (1485,409)
-]
+stage_3_rect_fall_zones = []
 
 def point_in_triangle(pt, v1, v2, v3):
     """ Checks if a point pt is inside the triangle defined by v1, v2, and v3. """
